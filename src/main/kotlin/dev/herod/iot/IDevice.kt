@@ -2,8 +2,8 @@ package dev.herod.iot
 
 interface IDevice {
     val name: String?
-    var friendlyName: String?
-    var serialNumber: String?
+    val friendlyName: String?
+    val serialNumber: String?
     val stateUpdateTimeMs: Long
 
     suspend fun syncState()

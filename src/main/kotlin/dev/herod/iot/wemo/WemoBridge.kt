@@ -1,12 +1,10 @@
 package dev.herod.iot.wemo
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import dev.herod.iot.HttpClient.client
+import io.ktor.client.request.get
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import java.net.*
-import java.util.*
 import kotlin.system.measureTimeMillis
 
 class WemoBridge {
@@ -15,31 +13,31 @@ class WemoBridge {
 
         val destAddress = InetSocketAddress(InetAddress.getByName(SSDP_IP), SSDP_PORT)
 
-        val discoveryMessageBytes = StringBuffer().apply {
+        val discoveryPacket = StringBuffer().apply {
             append("M-SEARCH * HTTP/1.1\r\n")
             append("HOST: $SSDP_IP:$SSDP_PORT\r\n")
             append("ST: upnp:rootdevice\r\n")
             append("MAN: \"ssdp:discover\"\r\n")
             append("MX: 1\r\n")
             append("\r\n")
-        }.toString().toByteArray()
+        }.toString().toByteArray().let { discoveryMessageBytes ->
+            DatagramPacket(
+                    discoveryMessageBytes,
+                    discoveryMessageBytes.size,
+                    destAddress
+            )
+        }
 
-        val discoveryPacket = DatagramPacket(
-                discoveryMessageBytes,
-                discoveryMessageBytes.size,
-                destAddress
-        )
-
-        val wildSocket = DatagramSocket(SSDP_SEARCH_PORT)
+        val socket = DatagramSocket(SSDP_SEARCH_PORT)
         try {
-            wildSocket.soTimeout = TIMEOUT
-            wildSocket.send(discoveryPacket)
+            socket.soTimeout = TIMEOUT
+            socket.send(discoveryPacket)
 
             while (true) {
                 try {
                     val size = 2048
                     val receivePacket = DatagramPacket(ByteArray(size), size)
-                    wildSocket.receive(receivePacket)
+                    socket.receive(receivePacket)
                     val message = receivePacket.data.toString(Charsets.UTF_8)
                     println(message)
                     GlobalScope.launch {
@@ -50,63 +48,36 @@ class WemoBridge {
                 }
             }
         } finally {
-            wildSocket.disconnect()
-            wildSocket.close()
+            socket.disconnect()
+            socket.close()
         }
-    }
-
-    private fun messageToHeaders(message: String): Map<String, String> {
-        val map = HashMap<String, String>()
-
-        message.split("\n".toRegex())
-                .dropLastWhile { it.isEmpty() }
-                .toTypedArray()
-                .forEach { pair ->
-                    try {
-                        val p = pair.split(":".toRegex(), 2).toTypedArray()
-                        map[p[0].trim { it <= ' ' }] = p[1].trim { it <= ' ' }
-                    } catch (ignored: Exception) {
-                    }
-                }
-        return map
     }
 
     private suspend fun addDevice(message: String) {
         try {
-            val map = messageToHeaders(message)
 
-            val device = WemoSwitch().apply {
-                name = message
-                headers.putAll(map)
-            }
+            val headers = message.split("\n")
+                    .map { line ->
+                        line.split(":".toRegex(), 2).map { it.trim() }.let { it[0] to it[1] }
+                    }.toMap().toMutableMap()
 
-            val location = map["LOCATION"]
-            val url = try {
-                URL(location)
-            } catch (e: Exception) {
-                return
-            }
+            val setupUrl = headers["LOCATION"]
+            val url = URL(setupUrl)
+            val xmlString = client.get<String>(url = url)
+            val deviceType = xmlString.getXmlNodeContents("deviceType") ?: return
+            val friendlyName = xmlString.getXmlNodeContents("friendlyName") ?: return
+            val name = friendlyName.toLowerCase().replace(" ", "_")
+//            val serialNumber = xmlString.getXmlNodeContents("serialNumber") ?: return
+            val location = setupUrl?.firstGroup("(http://.*)/.*".toRegex()) ?: return
 
-            device.location = location?.replace("(http://.*)/.*".toRegex(), "$1")
+            if (deviceType != "urn:Belkin:device:controllee:1") return
 
-            val inputStream = url.openStream().buffered()
-            val xml = XmlMapper().readTree(inputStream)
-
-            val objectMapper = ObjectMapper()
-            objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true)
-
-//            if ("belkin" !in objectMapper.writeValueAsString(xml)) {
-//                return
-//            }
-
-            val friendlyName = xml.get("device").get("friendlyName").asText()
-            device.friendlyName = friendlyName
-            device.name = friendlyName.toLowerCase().replace(" ", "_")
-            device.serialNumber = try {
-                xml.get("device").get("serialNumber").asText()
-            } catch (throwable: Throwable) {
-                null
-            }
+            val device = WemoSwitch(
+                    name = name,
+                    friendlyName = friendlyName,
+                    location = location,
+                    headers = headers
+            )
 
             withContext(IO) {
                 device.syncState()
@@ -116,6 +87,9 @@ class WemoBridge {
             e.printStackTrace()
         }
     }
+
+    private fun String.getXmlNodeContents(nodeName: String) =
+            "<$nodeName>(.*)</$nodeName>".toRegex().find(this)?.value
 
     private fun addDevice(device: Device) {
         val oldestAllowedTimeMs = System.currentTimeMillis() - 5 * 60 * 1000
@@ -174,6 +148,10 @@ class WemoBridge {
         private const val SSDP_IP = "239.255.255.250"
         private const val TIMEOUT = 5000
     }
+}
+
+private fun String.firstGroup(toRegex: Regex): String {
+    return replace(toRegex, "$1")
 }
 
 private operator fun List<Device>.get(s: String): Device? {

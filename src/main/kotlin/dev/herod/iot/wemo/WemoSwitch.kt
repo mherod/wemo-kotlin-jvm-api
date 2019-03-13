@@ -1,28 +1,19 @@
 package dev.herod.iot.wemo
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.apache.Apache
-import io.ktor.client.features.defaultRequest
-import io.ktor.client.features.logging.LogLevel
-import io.ktor.client.features.logging.Logging
-import io.ktor.client.request.accept
+import dev.herod.iot.HttpClient.client
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.content.TextContent
-import io.ktor.http.contentLength
-import io.ktor.http.contentType
 import io.ktor.http.withCharset
 import kotlinx.io.charsets.Charset
 import org.intellij.lang.annotations.Language
-import java.net.InetAddress
-import java.net.Socket
-import java.net.URL
 
 data class WemoSwitch @JvmOverloads constructor(
-        override var name: String? = null,
-        var location: String? = null,
+        override val name: String? = null,
+        override val friendlyName: String? = null,
+        val location: String? = null,
         val headers: MutableMap<String, String> = mutableMapOf(),
         override var stateUpdateTimeMs: Long = System.currentTimeMillis()
 ) : Device() {
@@ -82,11 +73,6 @@ data class WemoSwitch @JvmOverloads constructor(
 }
 
 suspend fun WemoSwitch.call(endpoint: String, soapCall: String, content: String): String {
-    val client = HttpClient(Apache) {
-        install(Logging) {
-            level = LogLevel.ALL
-        }
-    }
     return client.post(
             body = TextContent(
                     text = content,
