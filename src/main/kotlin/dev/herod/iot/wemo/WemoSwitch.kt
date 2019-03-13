@@ -25,7 +25,7 @@ data class WemoSwitch @JvmOverloads constructor(
                 content = setBinaryStateContent.replace("{{state}}", if (value) "1" else "0")
         ).also { response ->
             if ("error" !in response.toLowerCase())
-                internalState = value
+                switchState = value
         }
         return true
     }
@@ -42,7 +42,7 @@ data class WemoSwitch @JvmOverloads constructor(
                 .toRegex()
                 .find(resp)?.groupValues.orEmpty()
 
-        internalState = "1" in groupValues
+        switchState = "1" in groupValues
         stateUpdateTimeMs = System.currentTimeMillis()
     }
 

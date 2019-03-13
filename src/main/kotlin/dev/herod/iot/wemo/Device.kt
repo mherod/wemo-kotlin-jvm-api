@@ -6,5 +6,5 @@ abstract class Device @JvmOverloads constructor(
         override val name: String? = null,
         override val friendlyName: String? = null,
         override val serialNumber: String? = null,
-        internal var internalState: Boolean = false
+        override var switchState: Boolean = false
 ) : IDevice
