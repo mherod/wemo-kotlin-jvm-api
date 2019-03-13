@@ -58,7 +58,10 @@ class WemoBridge {
 
             val headers = message.split("\n")
                     .map { line ->
-                        line.split(":".toRegex(), 2).map { it.trim() }.let { it[0] to it[1] }
+                        line.split(":".toRegex(), 2)
+                                .map { it.trim() }
+                                .filterNot { it.isEmpty() }
+                                .let { it.getOrNull(0).orEmpty() to it.getOrNull(1).orEmpty() }
                     }.toMap().toMutableMap()
 
             val setupUrl = headers["LOCATION"]
@@ -108,6 +111,7 @@ class WemoBridge {
 
         internal val devices = mutableListOf<Device>()
 
+        @JvmStatic
         fun main(args: Array<String>) {
 
             val bridge = WemoBridge()
