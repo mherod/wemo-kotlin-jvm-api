@@ -108,8 +108,6 @@ class WemoBridge {
 
         internal val devices = mutableListOf<Device>()
 
-        @Throws(Exception::class)
-        @JvmStatic
         fun main(args: Array<String>) {
 
             val bridge = WemoBridge()
