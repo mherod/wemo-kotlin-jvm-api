@@ -1,7 +1,8 @@
 package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery.devices
-import dev.herod.iot.HttpClient.client
+import dev.herod.iot.MyHttpClient.client
+import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
@@ -11,7 +12,8 @@ import java.net.*
 
 object WemoBridge {
 
-    fun discovery() {
+    @JvmStatic
+    fun discovery(httpClient: HttpClient = client) {
 
         val destAddress = InetSocketAddress(InetAddress.getByName(SSDP_IP), SSDP_PORT)
 
@@ -43,7 +45,7 @@ object WemoBridge {
                     val message = receivePacket.data.toString(Charsets.UTF_8)
 
                     GlobalScope.launch {
-                        addDevice(message)
+                        addDevice(message, httpClient)
                     }
                 } catch (e: SocketTimeoutException) {
                     break
@@ -55,7 +57,7 @@ object WemoBridge {
         }
     }
 
-    private suspend fun addDevice(message: String) {
+    private suspend fun addDevice(message: String, httpClient: HttpClient) {
         try {
 
             val headers = message.split("\n")
@@ -72,7 +74,7 @@ object WemoBridge {
             } catch (e: Throwable) {
                 return
             }
-            val xmlString = client.get<String>(url = url)
+            val xmlString = httpClient.get<String>(url = url)
             val deviceType = xmlString.getXmlNodeContents("deviceType") ?: return
             val friendlyName = xmlString.getXmlNodeContents("friendlyName") ?: return
             val name = friendlyName.toLowerCase().replace(" ", "_")
@@ -85,7 +87,8 @@ object WemoBridge {
                     name = name,
                     friendlyName = friendlyName,
                     location = location,
-                    headers = headers
+                    headers = headers,
+                    httpClient = httpClient
             )
 
             withContext(IO) {

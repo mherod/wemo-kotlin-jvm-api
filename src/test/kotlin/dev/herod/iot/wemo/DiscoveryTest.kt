@@ -2,6 +2,7 @@ package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery
 import dev.herod.iot.IDevice
+import dev.herod.iot.MyHttpClient.client
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -18,7 +19,7 @@ class DiscoveryTest {
         val job = GlobalScope.launch {
             while (true) {
                 println("=== discovery start ===")
-                println("=== discovery took ${measureTimeMillis { DeviceDiscovery.start() }}ms")
+                println("=== discovery took ${measureTimeMillis { DeviceDiscovery.start(client) }}ms")
             }
         }
 

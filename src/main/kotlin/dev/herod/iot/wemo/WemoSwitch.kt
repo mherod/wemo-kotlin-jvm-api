@@ -1,6 +1,6 @@
 package dev.herod.iot.wemo
 
-import dev.herod.iot.HttpClient.client
+import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.url
@@ -15,8 +15,9 @@ data class WemoSwitch @JvmOverloads constructor(
         override val friendlyName: String? = null,
         val location: String? = null,
         val headers: MutableMap<String, String> = mutableMapOf(),
-        override var stateUpdateTimeMs: Long = System.currentTimeMillis()
-) : Device() {
+        override var stateUpdateTimeMs: Long = System.currentTimeMillis(),
+        override val httpClient: HttpClient
+) : Device(httpClient = httpClient) {
 
     override suspend fun updateState(value: Boolean): Boolean {
         call(
@@ -72,16 +73,17 @@ data class WemoSwitch @JvmOverloads constructor(
     }
 }
 
-suspend fun WemoSwitch.call(endpoint: String, soapCall: String, content: String): String {
-    return client.post(
-            body = TextContent(
-                    text = content,
-                    contentType = ContentType.Text.Xml.withCharset(Charset.forName("utf-8"))
-            ),
-            block = {
-                url("$location$endpoint")
-                header("SOAPACTION", "\"$soapCall\"")
-                println(this)
-            }
-    )
-}
+suspend fun WemoSwitch.call(
+        endpoint: String,
+        soapCall: String,
+        content: String
+): String = httpClient.post(
+        body = TextContent(
+                text = content,
+                contentType = ContentType.Text.Xml.withCharset(Charset.forName("utf-8"))
+        ),
+        block = {
+            url("$location$endpoint")
+            header("SOAPACTION", "\"$soapCall\"")
+        }
+)
