@@ -1,7 +1,6 @@
 package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery
-import dev.herod.iot.IDevice
 import dev.herod.iot.MyHttpClient.client
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -19,17 +18,18 @@ class DiscoveryTest {
         val job = GlobalScope.launch {
             while (true) {
                 println("=== discovery start ===")
-                println("=== discovery took ${measureTimeMillis { DeviceDiscovery.start(client) }}ms")
+                println("=== discovery took ${measureTimeMillis { DeviceDiscovery.start(client).join() }}ms")
             }
         }
 
-        val devices: List<IDevice> = DeviceDiscovery.devices
+        val devices = DeviceDiscovery.devices
 
         runBlocking {
-            delay(3000)
-            devices.forEach {
-                it.updateState(false)
-            }
+            while (devices.size == 0) delay(800)
+            job.cancel()
+//            devices.forEach {
+//                it.updateState(false)
+//            }
 //            devices["Bedroom Cabinet"]?.updateState(true)
 //            devices["Bedroom Desk"]?.updateState(true)
 //            while (true) {
@@ -44,7 +44,6 @@ class DiscoveryTest {
                 }
                 assertTrue(devices.isNotEmpty())
             }
-            job.cancel()
         }
     }
 }

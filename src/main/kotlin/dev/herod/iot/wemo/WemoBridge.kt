@@ -1,11 +1,11 @@
 package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery.devices
-import dev.herod.iot.MyHttpClient.client
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.*
@@ -13,7 +13,7 @@ import java.net.*
 object WemoBridge {
 
     @JvmStatic
-    fun discovery(httpClient: HttpClient = client) {
+    fun discovery(httpClient: HttpClient): Job = GlobalScope.launch {
 
         val destAddress = InetSocketAddress(InetAddress.getByName(SSDP_IP), SSDP_PORT)
 
@@ -35,16 +35,19 @@ object WemoBridge {
         val socket = DatagramSocket(SSDP_SEARCH_PORT)
         try {
             socket.soTimeout = TIMEOUT
-            socket.send(discoveryPacket)
-
+            withContext(IO) {
+                socket.send(discoveryPacket)
+            }
             while (true) {
                 try {
                     val size = 2048
                     val receivePacket = DatagramPacket(ByteArray(size), size)
-                    socket.receive(receivePacket)
+                    withContext(IO) {
+                        socket.receive(receivePacket)
+                    }
                     val message = receivePacket.data.toString(Charsets.UTF_8)
 
-                    GlobalScope.launch {
+                    launch {
                         addDevice(message, httpClient)
                     }
                 } catch (e: SocketTimeoutException) {
@@ -74,11 +77,15 @@ object WemoBridge {
             } catch (e: Throwable) {
                 return
             }
-            val xmlString = httpClient.get<String>(url = url)
+            val xmlString = try {
+                httpClient.get<String>(url = url)
+            } catch (e: Throwable) {
+                return
+            }
             val deviceType = xmlString.getXmlNodeContents("deviceType") ?: return
             val friendlyName = xmlString.getXmlNodeContents("friendlyName") ?: return
             val name = friendlyName.toLowerCase().replace(" ", "_")
-//            val serialNumber = xmlString.getXmlNodeContents("serialNumber") ?: return
+            val serialNumber = xmlString.getXmlNodeContents("serialNumber") ?: return
             val location = setupUrl?.firstGroup("(http://.*)/.*".toRegex()) ?: return
 
             if (deviceType != "urn:Belkin:device:controllee:1") return
@@ -88,7 +95,8 @@ object WemoBridge {
                     friendlyName = friendlyName,
                     location = location,
                     headers = headers,
-                    httpClient = httpClient
+                    httpClient = httpClient,
+                    serialNumber = serialNumber
             )
 
             withContext(IO) {

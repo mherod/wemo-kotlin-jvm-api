@@ -13,6 +13,7 @@ import org.intellij.lang.annotations.Language
 data class WemoSwitch @JvmOverloads constructor(
         override val name: String? = null,
         override val friendlyName: String? = null,
+        override val serialNumber: String,
         val location: String? = null,
         val headers: MutableMap<String, String> = mutableMapOf(),
         override var stateUpdateTimeMs: Long = System.currentTimeMillis(),
