@@ -24,12 +24,15 @@ data class WemoSwitch @JvmOverloads constructor(
         call(
                 endpoint = endpoint,
                 soapCall = "urn:Belkin:service:basicevent:1#SetBinaryState",
-                content = setBinaryStateContent.replace("{{state}}", if (value) "1" else "0")
+                content = setBinaryStateContent.replace(
+                        regex = "<BinaryState>(.*)</BinaryState>".toRegex(),
+                        replacement = "<BinaryState>${if (value) "1" else "0"}</BinaryState>"
+                )
         ).also { response ->
             if ("error" !in response.toLowerCase())
                 switchState = value
         }
-        return true
+        return switchState
     }
 
     override suspend fun syncState() {
@@ -56,7 +59,7 @@ data class WemoSwitch @JvmOverloads constructor(
             s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
     <s:Body>
         <u:SetBinaryState xmlns:u="urn:Belkin:service:basicevent:1">
-            <BinaryState>1</BinaryState>
+            <BinaryState>{{s}}</BinaryState>
         </u:SetBinaryState>
     </s:Body>
 </s:Envelope>"""
