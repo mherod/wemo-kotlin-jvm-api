@@ -2,6 +2,9 @@ package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery
 import dev.herod.iot.MyHttpClient.client
+import dev.herod.iot.SwitchState
+import dev.herod.iot.SwitchableDevice
+import dev.herod.iot.get
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -21,8 +24,8 @@ class DiscoveryTest {
                 println("=== discovery took ${measureTimeMillis { DeviceDiscovery.start(client).join() }}ms")
             }
         }
-
         val devices = DeviceDiscovery.devices
+                .filterIsInstance(SwitchableDevice::class.java)
 
         runBlocking {
             while (devices.size == 0) delay(800)
@@ -38,6 +41,11 @@ class DiscoveryTest {
 //                devices["Bedroom Bright Light"]?.updateState(false)
 //                delay(500)
 //            }
+            delay(8000)
+            devices.forEach {
+                it.updateState(SwitchState.OFF)
+            }
+            devices["Bedroom Desk"]?.updateState(SwitchState.ON)
             synchronized(devices) {
                 devices.forEach {
                     println(" - ${it.friendlyName} is ${it.switchState}")

@@ -32,8 +32,9 @@ object WemoBridge {
             )
         }
 
-        val socket = DatagramSocket(SSDP_SEARCH_PORT)
+        lateinit var socket: DatagramSocket
         try {
+            socket = DatagramSocket(SSDP_SEARCH_PORT)
             socket.soTimeout = TIMEOUT
             withContext(IO) {
                 socket.send(discoveryPacket)
@@ -51,6 +52,7 @@ object WemoBridge {
                         addDevice(message, httpClient)
                     }
                 } catch (e: SocketTimeoutException) {
+                    println(e)
                     break
                 }
             }
@@ -111,7 +113,7 @@ object WemoBridge {
     private fun String.getXmlNodeContents(nodeName: String) =
             "<$nodeName>(.*)</$nodeName>".toRegex().find(this)?.groupValues?.lastOrNull()
 
-    private fun addDevice(device: Device) {
+    private fun addDevice(device: SsdpDevice) {
         val oldestAllowedTimeMs = System.currentTimeMillis() - 5 * 60 * 1000
         synchronized(devices) {
             if (!devices.any { it.serialNumber == device.serialNumber }) {
@@ -127,7 +129,7 @@ object WemoBridge {
     private const val SSDP_PORT = 1900
     private const val SSDP_SEARCH_PORT = 1903
     private const val SSDP_IP = "239.255.255.250"
-    private const val TIMEOUT = 5000
+    private const val TIMEOUT = 6000
 }
 
 private fun String.firstGroup(toRegex: Regex): String {

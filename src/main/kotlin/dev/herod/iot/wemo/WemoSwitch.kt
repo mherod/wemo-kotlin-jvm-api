@@ -1,5 +1,6 @@
 package dev.herod.iot.wemo
 
+import dev.herod.iot.SwitchState
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -18,15 +19,21 @@ data class WemoSwitch @JvmOverloads constructor(
         val headers: MutableMap<String, String> = mutableMapOf(),
         override var stateUpdateTimeMs: Long = System.currentTimeMillis(),
         override val httpClient: HttpClient
-) : Device(httpClient = httpClient) {
+) : SsdpDevice(httpClient = httpClient) {
 
-    override suspend fun updateState(value: Boolean): Boolean {
+    override suspend fun updateState(value: SwitchState): Boolean {
+
+        if (value !is SwitchState.ON && value !is SwitchState.OFF) {
+            throw IllegalArgumentException("Valid states are either ON or OFF")
+        }
         call(
                 endpoint = endpoint,
                 soapCall = "urn:Belkin:service:basicevent:1#SetBinaryState",
                 content = setBinaryStateContent.replace(
                         regex = "<BinaryState>(.*)</BinaryState>".toRegex(),
-                        replacement = "<BinaryState>${if (value) "1" else "0"}</BinaryState>"
+                        replacement = "<BinaryState>${
+                        if (value is SwitchState.ON) "1" else "0"
+                }</BinaryState>"
                 )
         ).also { response ->
             if ("error" !in response.toLowerCase())
@@ -47,7 +54,7 @@ data class WemoSwitch @JvmOverloads constructor(
                 .toRegex()
                 .find(resp)?.groupValues.orEmpty()
 
-        switchState = "1" in groupValues
+        switchState = if ("1" in groupValues) SwitchState.ON else if ("0" in groupValues) SwitchState.OFF else SwitchState.UNSURE
         stateUpdateTimeMs = System.currentTimeMillis()
     }
 
