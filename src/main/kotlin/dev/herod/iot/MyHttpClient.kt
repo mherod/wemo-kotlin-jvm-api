@@ -9,7 +9,7 @@ object MyHttpClient {
     @JvmStatic
     val client = HttpClient(Apache) {
         install(Logging) {
-            level = LogLevel.INFO
+            level = LogLevel.ALL
         }
     }
 }
