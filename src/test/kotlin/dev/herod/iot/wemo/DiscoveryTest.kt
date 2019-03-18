@@ -25,10 +25,9 @@ class DiscoveryTest {
             }
         }
         val devices = DeviceDiscovery.devices
-                .filterIsInstance(SwitchableDevice::class.java)
 
         runBlocking {
-            while (devices.size == 0) delay(800)
+            while (devices.isEmpty()) delay(800)
             job.cancel()
 //            devices.forEach {
 //                it.updateState(false)
@@ -41,7 +40,7 @@ class DiscoveryTest {
 //                devices["Bedroom Bright Light"]?.updateState(false)
 //                delay(500)
 //            }
-            delay(8000)
+            val devices = devices.filterIsInstance(SwitchableDevice::class.java)
             devices.forEach {
                 it.updateState(SwitchState.OFF)
             }
