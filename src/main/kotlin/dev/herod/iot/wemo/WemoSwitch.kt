@@ -1,5 +1,6 @@
 package dev.herod.iot.wemo
 
+import dev.herod.iot.SsdpDevice
 import dev.herod.iot.SwitchState
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header

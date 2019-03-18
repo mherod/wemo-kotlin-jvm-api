@@ -1,6 +1,8 @@
 package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery.devices
+import dev.herod.iot.MyHttpClient.client
+import dev.herod.iot.SsdpDevice
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import kotlinx.coroutines.Dispatchers.IO
@@ -95,6 +97,7 @@ object WemoBridge {
             val device = WemoSwitch(
                     name = name,
                     friendlyName = friendlyName,
+                    serialNumber = serialNumber,
                     location = location,
                     headers = headers,
                     httpClient = httpClient,

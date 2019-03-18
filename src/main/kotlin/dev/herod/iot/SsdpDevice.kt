@@ -1,7 +1,5 @@
-package dev.herod.iot.wemo
+package dev.herod.iot
 
-import dev.herod.iot.SwitchState
-import dev.herod.iot.SwitchableDevice
 import io.ktor.client.HttpClient
 
 abstract class SsdpDevice @JvmOverloads constructor(
