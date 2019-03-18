@@ -1,7 +1,6 @@
 package dev.herod.iot.wemo
 
 import dev.herod.iot.DeviceDiscovery.devices
-import dev.herod.iot.MyHttpClient.client
 import dev.herod.iot.SsdpDevice
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -100,8 +99,7 @@ object WemoBridge {
                     serialNumber = serialNumber,
                     location = location,
                     headers = headers,
-                    httpClient = httpClient,
-                    serialNumber = serialNumber
+                    httpClient = httpClient
             )
 
             withContext(IO) {

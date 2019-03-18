@@ -34,13 +34,13 @@ data class WemoSwitch @JvmOverloads constructor(
                         regex = "<BinaryState>(.*)</BinaryState>".toRegex(),
                         replacement = "<BinaryState>${
                         if (value is SwitchState.ON) "1" else "0"
-                }</BinaryState>"
+                        }</BinaryState>"
                 )
         ).also { response ->
             if ("error" !in response.toLowerCase())
                 switchState = value
         }
-        return switchState
+        return switchState == value
     }
 
     override suspend fun syncState() {
